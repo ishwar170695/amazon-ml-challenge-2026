@@ -1019,9 +1019,9 @@ def run_predict(sample_limit=None, target_country=None):
                 inv_pruned[k] = v
         del inv
 
-        # 4. Stream & chunk S1 entities (50,000 S1 per chunk to keep RAM < 1.5 GB)
+        # 4. Stream & chunk S1 entities (5,000 S1 per chunk to keep RAM < 300 MB)
         s1_ids = list(s1_dict.keys())
-        chunk_size = 50000
+        chunk_size = 5000
         print(f"  Evaluating {len(s1_ids):,} S1 entities in chunks of {chunk_size:,}...", flush=True)
 
         for ch_idx in range(0, len(s1_ids), chunk_size):
@@ -1051,11 +1051,18 @@ def run_predict(sample_limit=None, target_country=None):
                 name_to_cmat = {name: c_csr[i] for i, name in enumerate(all_chunk_names)}
                 del all_chunk_names, w_csr, c_csr
                 
-                X_chunk = extract_features_vectorized(ch_pairs, ch_s1_dict, ch_cand_dict, word_vec, char_vec, name_to_wmat, name_to_cmat)
-                del name_to_wmat, name_to_cmat, ch_cand_dict
-                
-                probs = clf.predict_proba(X_chunk)[:, 1]
-                del X_chunk
+                # Sub-batch candidate pairs into 100k blocks (array allocation < 9 MB!)
+                pair_batch_size = 100000
+                all_probs = []
+                for p_start in range(0, len(ch_pairs), pair_batch_size):
+                    sub_pairs = ch_pairs[p_start:p_start + pair_batch_size]
+                    X_sub = extract_features_vectorized(sub_pairs, ch_s1_dict, ch_cand_dict, word_vec, char_vec, name_to_wmat, name_to_cmat)
+                    p_sub = clf.predict_proba(X_sub)[:, 1]
+                    all_probs.append(p_sub)
+                    del X_sub
+                    
+                probs = np.concatenate(all_probs) if all_probs else np.array([], dtype=np.float32)
+                del name_to_wmat, name_to_cmat, ch_cand_dict, all_probs
             else:
                 probs = np.array([], dtype=np.float32)
                 
