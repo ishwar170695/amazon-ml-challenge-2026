@@ -46,6 +46,7 @@ sys.stdout.reconfigure(encoding='utf-8')
 import os, re, time, random, pickle, json, argparse, subprocess, gc
 import unicodedata
 import numpy as np
+import scipy.sparse as sp
 import pandas as pd
 from lightgbm import LGBMClassifier
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -396,6 +397,84 @@ def extract_features_batch(pairs, s1_dict, cand_dict, s1_wdict, c_wdict, s1_cdic
         out.append([ntj, nts, nlv, nc3, twc, tcc, lex, acr, nsm, mnm, pcm, mpc, ljc, slv, ac3, alv, mad, nld, phs, cbs, ukm])
         
     return np.array(out, dtype=np.float32)
+
+def extract_features_vectorized(pairs, s1_dict, cand_dict, word_vec, char_vec, name_to_wmat, name_to_cmat):
+    n_pairs = len(pairs)
+    out = np.empty((n_pairs, 21), dtype=np.float32)
+    
+    s1_names = [s1_dict[s1id]['stripped_name'] for s1id, _ in pairs]
+    c_names = [cand_dict[cid]['stripped_name'] for _, cid in pairs]
+    
+    s1_w_rows = sp.vstack([name_to_wmat[n] for n in s1_names])
+    c_w_rows = sp.vstack([name_to_wmat[n] for n in c_names])
+    twc_vec = np.array(s1_w_rows.multiply(c_w_rows).sum(axis=1)).flatten()
+    del s1_w_rows, c_w_rows
+    
+    s1_c_rows = sp.vstack([name_to_cmat[n] for n in s1_names])
+    c_c_rows = sp.vstack([name_to_cmat[n] for n in c_names])
+    tcc_vec = np.array(s1_c_rows.multiply(c_c_rows).sum(axis=1)).flatten()
+    del s1_c_rows, c_c_rows
+    
+    for i, (s1id, cid) in enumerate(pairs):
+        r1, r2 = s1_dict[s1id], cand_dict[cid]
+        n1, n2 = r1['norm_name'], r2['norm_name']
+        a1, a2 = r1['norm_address'], r2['norm_address']
+        p1, p2 = r1['parsed_addr'], r2['parsed_addr']
+        
+        ntj = set_jaccard(r1['sig_tokens'], r2['sig_tokens'])
+        nts = fuzz.token_sort_ratio(n1, n2) / 100.0
+        nlv = fuzz.ratio(n1, n2) / 100.0
+        nc3 = set_jaccard(r1['c3_name'], r2['c3_name'])
+        
+        twc = twc_vec[i]
+        tcc = tcc_vec[i]
+        
+        lex = 1.0 if r1['stripped_name'] and r1['stripped_name'] == r2['stripped_name'] else 0.0
+        acr = 1.0 if r1['acronyms'] & r2['acronyms'] else 0.0
+        
+        if p1['number'] and p2['number']:
+            nsm = 1.0 if p1['number'] == p2['number'] else -1.0
+            mnm = 0.0
+        else:
+            nsm = 0.0; mnm = 1.0
+            
+        if p1['postcode'] and p2['postcode']:
+            if p1['postcode'] == p2['postcode']:
+                pcm = 1.0
+            elif p1['postcode'][:3] == p2['postcode'][:3]:
+                pcm = 0.5
+            else:
+                pcm = -1.0
+            mpc = 0.0
+        else:
+            pcm = 0.0; mpc = 1.0
+            
+        ljc = set_jaccard(p1['loc_tokens'], p2['loc_tokens'])
+        st1, st2 = p1['street'], p2['street']
+        slv = (fuzz.ratio(st1, st2) / 100.0) if st1 and st2 else 0.0
+        ac3 = set_jaccard(r1['c3_addr'], r2['c3_addr'])
+        alv = (fuzz.ratio(a1, a2) / 100.0) if a1 and a2 else 0.0
+        mad = 1.0 if not a1 or not a2 else 0.0
+        
+        max_l = max(len(n1), len(n2), 1)
+        nld = abs(len(n1) - len(n2)) / max_l
+        
+        pht1 = ' '.join(r1['phonetic_tokens'])
+        pht2 = ' '.join(r2['phonetic_tokens'])
+        phs = (fuzz.token_sort_ratio(pht1, pht2) / 100.0) if pht1 and pht2 else 0.0
+        
+        cb1 = r1['compact_brand']
+        cb2 = r2['compact_brand']
+        cbs = (fuzz.ratio(cb1, cb2) / 100.0) if cb1 and cb2 else 0.0
+        
+        u1 = r1['unit_keys']
+        u2 = r2['unit_keys']
+        ukm = 1.0 if (u1 and u2 and (u1 & u2)) else (-1.0 if (u1 and u2) else 0.0)
+        
+        out[i] = [ntj, nts, nlv, nc3, twc, tcc, lex, acr, nsm, mnm, pcm, mpc, ljc, slv, ac3, alv, mad, nld, phs, cbs, ukm]
+        
+    return out
+
 
 FEATURE_NAMES = [
     'ntj', 'nts', 'nlv', 'nc3', 'twc', 'tcc', 'lex', 'acr',
@@ -894,8 +973,9 @@ def run_predict(sample_limit=None, target_country=None):
         if not s1_dict:
             continue
 
-        # 2. Load candidates (S2 and S3) for this country
-        cand_dict = {}
+        # 2. Stream-index candidates (S2 and S3) for this country into lightweight inverted index
+        cand_raw = {}
+        inv = {}
         for sf in ['dataset/test/test_source2.tsv', 'dataset/test/test_source3.tsv']:
             cnt = 0
             with open(sf, 'r', encoding='utf-8') as f:
@@ -903,80 +983,108 @@ def run_predict(sample_limit=None, target_country=None):
                 for line in f:
                     p = line.strip().split('\t')
                     if len(p) >= 4 and p[3] == country:
-                        cand_dict[p[0]] = make_record(p[0], p[1], p[2] if p[2] != 'nan' else '', p[3])
+                        cid, cname, caddr = p[0], p[1], p[2] if p[2] != 'nan' else ''
+                        cand_raw[cid] = (cname, caddr)
+                        
+                        # Extract blocking keys on-the-fly without full make_record overhead
+                        name_ascii = anyascii.anyascii(cname) if any(ord(c) > 127 for c in cname) else cname
+                        addr_ascii = anyascii.anyascii(caddr) if any(ord(c) > 127 for c in caddr) else caddr
+                        nn = normalize_text(name_ascii)
+                        na = normalize_text(addr_ascii, is_address=True)
+                        st = sig_tokens(nn)
+                        
+                        for tok in st: inv.setdefault((country, 'T', tok), []).append(cid)
+                        for num in get_addr_numbers(addr_ascii): inv.setdefault((country, 'N', num), []).append(cid)
+                        for h in get_house_codes(addr_ascii): inv.setdefault((country, 'H', h), []).append(cid)
+                        for acr in gen_acronyms(nn): inv.setdefault((country, 'A', acr), []).append(cid)
+                        for pht in {indic_phonetic_skeleton(t) for t in st if len(t) >= 3}:
+                            inv.setdefault((country, 'PH', pht), []).append(cid)
+                        for uk in extract_unit_keys(addr_ascii): inv.setdefault((country, 'UK', uk), []).append(cid)
+                        cb = clean_compact_brand(nn)
+                        if cb: inv.setdefault((country, 'CB', cb[:8]), []).append(cid)
+                        for atok in get_distinctive_addr_tokens(na): inv.setdefault((country, 'AT', atok), []).append(cid)
+                        if len(nn) >= 3: inv.setdefault((country, 'P', nn[:3]), []).append(cid)
+                        
                         cnt += 1
                         if sample_limit and cnt >= sample_limit * 5:
                             break
-            print(f"    Loaded {cnt:,} {country} candidates from {os.path.basename(sf)}", flush=True)
-        print(f"  Total candidate pool for {country}: {len(cand_dict):,} records", flush=True)
+            print(f"    Indexed {cnt:,} {country} candidates from {os.path.basename(sf)}", flush=True)
+        print(f"  Total candidate pool for {country}: {len(cand_raw):,} records", flush=True)
 
-        # 3. Build inverted index for this country
-        print(f"  Building inverted index for {country}...", flush=True)
-        inv_pruned = build_inverted_index(cand_dict)
+        # 3. Prune inverted index
+        inv_pruned = {}
+        for k, v in inv.items():
+            limit = 80 if k[1] == 'P' else (150 if k[1] == 'AT' else 300)
+            if len(v) <= limit:
+                inv_pruned[k] = v
+        del inv
 
-        # 4. Query candidate pairs
-        print(f"  Querying candidates from inverted index...", flush=True)
-        test_pairs = []
-        for sid, r in s1_dict.items():
-            for cid in query_candidates(r, inv_pruned):
-                test_pairs.append((sid, cid))
-        print(f"  Pairs to evaluate for {country}: {len(test_pairs):,}", flush=True)
+        # 4. Stream & chunk S1 entities (50,000 S1 per chunk to keep RAM < 1.5 GB)
+        s1_ids = list(s1_dict.keys())
+        chunk_size = 50000
+        print(f"  Evaluating {len(s1_ids):,} S1 entities in chunks of {chunk_size:,}...", flush=True)
 
-        # 5. Extract features in chunks if pairs > 500k to bound memory
-        pair_chunk_size = 500000
-        all_probs = []
-        all_features = []
-        for ch_start in range(0, max(len(test_pairs), 1), pair_chunk_size):
-            ch_pairs = test_pairs[ch_start:ch_start + pair_chunk_size]
-            if not ch_pairs: break
+        for ch_idx in range(0, len(s1_ids), chunk_size):
+            ch_s1_ids = s1_ids[ch_idx:ch_idx + chunk_size]
+            ch_s1_dict = {sid: s1_dict[sid] for sid in ch_s1_ids}
             
-            s1_sub = list({s for s, _ in ch_pairs})
-            c_sub = list({c for _, c in ch_pairs})
-            s1n = [s1_dict[s]['stripped_name'] for s in s1_sub]
-            cn = [cand_dict[c]['stripped_name'] for c in c_sub]
+            # Query candidate pairs for this chunk
+            ch_pairs = []
+            needed_cids = set()
+            s1_cand_map = {s: [] for s in ch_s1_ids}
+            for sid, r in ch_s1_dict.items():
+                cands = query_candidates(r, inv_pruned)
+                for cid in cands:
+                    ch_pairs.append((sid, cid))
+                    needed_cids.add(cid)
+                    s1_cand_map[sid].append(cid)
+                    
+            if ch_pairs:
+                # Instantiate make_record ONLY for the needed candidates in this chunk
+                ch_cand_dict = {cid: make_record(cid, cand_raw[cid][0], cand_raw[cid][1], country) for cid in needed_cids}
+                
+                # TF-IDF sparse matrices for names in this chunk
+                all_chunk_names = list({ch_s1_dict[s]['stripped_name'] for s in ch_s1_ids} | {ch_cand_dict[c]['stripped_name'] for c in needed_cids})
+                w_csr = word_vec.transform(all_chunk_names)
+                c_csr = char_vec.transform(all_chunk_names)
+                name_to_wmat = {name: w_csr[i] for i, name in enumerate(all_chunk_names)}
+                name_to_cmat = {name: c_csr[i] for i, name in enumerate(all_chunk_names)}
+                del all_chunk_names, w_csr, c_csr
+                
+                X_chunk = extract_features_vectorized(ch_pairs, ch_s1_dict, ch_cand_dict, word_vec, char_vec, name_to_wmat, name_to_cmat)
+                del name_to_wmat, name_to_cmat, ch_cand_dict
+                
+                probs = clf.predict_proba(X_chunk)[:, 1]
+                del X_chunk
+            else:
+                probs = np.array([], dtype=np.float32)
+                
+            final_matches = collective_resolve(
+                ch_pairs, probs, ch_s1_ids,
+                primary_threshold=thresh_config, secondary_threshold=sec_thresh, margin=margin,
+                s1_dict=ch_s1_dict
+            )
 
-            s1_wdict = dict(zip(s1_sub, csr_to_dict_list(word_vec.transform(s1n))))
-            s1_cdict = dict(zip(s1_sub, csr_to_dict_list(char_vec.transform(s1n))))
-            c_wdict = dict(zip(c_sub, csr_to_dict_list(word_vec.transform(cn))))
-            c_cdict = dict(zip(c_sub, csr_to_dict_list(char_vec.transform(cn))))
-            del s1n, cn
+            with open(out_file, 'a', encoding='utf-8') as f:
+                for sid in ch_s1_ids:
+                    m = final_matches.get(sid, [])
+                    if m: total_matches_found += 1
+                    f.write(f"{sid}\t{','.join(m) if m else ''}\n")
 
-            X_chunk = extract_features_batch(ch_pairs, s1_dict, cand_dict, s1_wdict, c_wdict, s1_cdict, c_cdict)
-            p_chunk = clf.predict_proba(X_chunk)[:, 1]
-            all_probs.append(p_chunk)
-            all_features.append(X_chunk)
-            del s1_wdict, s1_cdict, c_wdict, c_cdict
+            with open(cand_file, 'a', encoding='utf-8') as f:
+                for sid in ch_s1_ids:
+                    cands = s1_cand_map.get(sid, [])
+                    f.write(f"{sid}\t{','.join(cands) if cands else ''}\n")
 
-        probs = np.concatenate(all_probs) if all_probs else np.array([], dtype=np.float32)
-        X_all = np.vstack(all_features) if all_features else np.empty((0, len(FEATURE_NAMES)), dtype=np.float32)
+            total_s1_processed += len(ch_s1_ids)
+            pct = ((ch_idx + len(ch_s1_ids)) / len(s1_ids)) * 100.0
+            print(f"    Processed [{ch_idx + len(ch_s1_ids):,}/{len(s1_ids):,}] ({pct:.1f}%) in {time.time()-c_t0:.1f}s", flush=True)
 
-        # 6. Collective resolution with country-calibrated threshold
-        final_matches = collective_resolve(
-            test_pairs, probs, list(s1_dict.keys()),
-            primary_threshold=thresh_config, secondary_threshold=sec_thresh, margin=margin,
-            pair_features=X_all, s1_dict=s1_dict
-        )
+            del ch_pairs, needed_cids, ch_s1_dict, probs, final_matches, s1_cand_map
+            gc.collect()
 
-        # 7. Append directly to output files
-        s1_cand_map = {s: [] for s in s1_dict.keys()}
-        for s, c in test_pairs: s1_cand_map[s].append(c)
-
-        with open(out_file, 'a', encoding='utf-8') as f:
-            for sid in s1_dict.keys():
-                m = final_matches.get(sid, [])
-                if m: total_matches_found += 1
-                f.write(f"{sid}\t{','.join(m) if m else ''}\n")
-
-        with open(cand_file, 'a', encoding='utf-8') as f:
-            for sid in s1_dict.keys():
-                cands = s1_cand_map.get(sid, [])
-                f.write(f"{sid}\t{','.join(cands) if cands else ''}\n")
-
-        total_s1_processed += len(s1_dict)
         print(f"  Finished {country}: {len(s1_dict):,} S1 entities processed in {time.time()-c_t0:.1f}s", flush=True)
-
-        # Free memory before next country
-        del s1_dict, cand_dict, inv_pruned, test_pairs, probs, X_all, final_matches, s1_cand_map
+        del s1_dict, cand_raw, inv_pruned
         gc.collect()
 
     print(f"\n[DONE] Processed {total_s1_processed:,} total S1 records. Found matches for {total_matches_found:,} entities.", flush=True)
