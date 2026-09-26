@@ -577,9 +577,9 @@ def run_train(n_train_s1=40000):
             'model': clf,
             'word_tfidf': word_vec,
             'char_tfidf': char_vec,
-            'thresholds': {'US': 0.94, 'India': 0.94, 'France': 0.90, 'default': 0.85},
-            'secondary_threshold': 0.88,
-            'margin': 0.20
+            'thresholds': {'US': 0.98, 'India': 0.97, 'France': 0.97, 'default': 0.97},
+            'secondary_threshold': 0.97,
+            'margin': 0.05
         }, f)
     print(f"  Model saved to {model_path} ({time.time()-t0:.1f}s)", flush=True)
 
@@ -857,9 +857,9 @@ def run_predict(sample_limit=None, target_country=None):
     clf = artifacts['model']
     word_vec = artifacts['word_tfidf']
     char_vec = artifacts['char_tfidf']
-    thresh_config = artifacts.get('thresholds', {'US': 0.85, 'India': 0.88, 'France': 0.90, 'default': 0.85})
-    sec_thresh = artifacts.get('secondary_threshold', 0.88)
-    margin = artifacts.get('margin', 0.20)
+    thresh_config = artifacts.get('thresholds', {'US': 0.98, 'India': 0.97, 'France': 0.97, 'default': 0.97})
+    sec_thresh = artifacts.get('secondary_threshold', 0.97)
+    margin = artifacts.get('margin', 0.05)
 
     os.makedirs('output', exist_ok=True)
     out_file = 'output/matching_results.tsv'
