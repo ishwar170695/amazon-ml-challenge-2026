@@ -1,0 +1,20 @@
+{
+  "val_base_f05": 0.9748196025601293,
+  "val_filt_f05": 0.9705269694949992,
+  "test_base_f05": 0.9744178683436199,
+  "test_filt_f05": 0.9732256461155481,
+  "prob_distribution": {
+    "Blocking Miss (Never retrieved)": 37,
+    "Low Probability (P < 0.80)": 105,
+    "Sub-Threshold Just Missed (0.95 <= P < 0.97)": 56,
+    "Near Threshold (0.90 <= P < 0.95)": 59,
+    "Moderate Probability (0.80 <= P < 0.90)": 40,
+    "High Probability (P >= 0.97) Bipartite/Cap Dropped": 3
+  },
+  "feature_bottlenecks": {
+    "General Feature Boundary": 174,
+    "Address Hierarchy / Reordering (Name match high, Address Jaccard low)": 28,
+    "Corporate Form / Abbreviation Variant": 50,
+    "Phonetic Transliteration Variant (Phonetic high, string low)": 11
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "current_gated": {
+    "name": "Current Gated Ingestion (p >= p_th)",
+    "macro_f05": 0.9714232106839706,
+    "us_f05": 0.977397802302136,
+    "in_f05": 0.9622184536787481,
+    "efp": 313,
+    "efn": 760,
+    "total_predictions": 16819,
+    "primary_matches": 4744,
+    "secondary_matches": 12075,
+    "singleton_f05": 0.9496579010645507,
+    "multi_f05": 0.9760539789886851
+  },
+  "decoupled": {
+    "name": "Decoupled Ingestion (p >= s_th)",
+    "macro_f05": 0.9615118952977678,
+    "us_f05": 0.9679753591257056,
+    "in_f05": 0.9515539571238316,
+    "efp": 677,
+    "efn": 550,
+    "total_predictions": 17403,
+    "primary_matches": 4744,
+    "secondary_matches": 12659,
+    "singleton_f05": 0.9298176349692608,
+    "multi_f05": 0.9662719687352679
+  },
+  "recovered_true_matches": 210,
+  "introduced_false_matches": 374,
+  "unique_s1_affected": 506
+}

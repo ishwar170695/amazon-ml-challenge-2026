@@ -1,0 +1,26 @@
+{
+  "test_macro_f05": 0.9775945585899062,
+  "us_f05": 0.9827544068539996,
+  "in_f05": 0.9696450362643316,
+  "indian_fns_count": 327,
+  "indian_fps_count": 110,
+  "fn_taxonomy": {
+    "1. Blocking Recall Failure (Never Retrieved)": 53,
+    "2. Residual Non-Latin Script Mismatch": 102,
+    "6. Sub-Threshold Margin (0.93 <= P < 0.97)": 22,
+    "7. Other Feature Boundary (P < 0.93)": 47,
+    "3. Missing Address Field (Address Blank)": 55,
+    "4. DBA / Trade Brand Alias (Disjoint Name, Matching Address)": 25,
+    "5. Address Hierarchy Reordering / Ward vs City": 23
+  },
+  "fp_prob_bands": {
+    "High Conf (0.980 <= P < 0.990)": 25,
+    "Ultra High Conf (P >= 0.990)": 60,
+    "Marginal Positive (0.970 <= P < 0.980)": 25
+  },
+  "fp_types": {
+    "General Boundary False Positive": 87,
+    "Commercial Building / Shared Street Co-tenant": 13,
+    "Same Name Chain / Multiple Branch Confusion": 10
+  }
+}

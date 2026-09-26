@@ -57,7 +57,7 @@ random.seed(42); np.random.seed(42)
 # ================================================================
 # CONSTANTS & REGEXES
 # ================================================================
-LEGAL_SUFFIXES_REGEX = r'\b(corp|corporation|incorporated|inc|ltd|limited|pvt|private|llc|llp|gmbh|ag|sa|sarl|sas|sasu|plc|bv|nv|spa|srl|sl|cie|co|company|eurl|sci|snc|gie|earl|gaec|scp|selarl|ei|eirl)\b'
+LEGAL_SUFFIXES_REGEX = r'\b(corp|corporation|incorporated|inc|ltd|limited|pvt|private|llc|llp|gmbh|ag|sa|sarl|sas|sasu|plc|bv|nv|spa|srl|sl|cie|co|company|eurl|sci|snc|gie|earl|gaec|scp|selarl|ei|eirl|praivet|praivrr|piraivet|praibhet|praiveta|limirrd|limitet|limittad|prvt|pvtltd|pvt-ltd|elelpi|pra\s*li|prali)\b'
 
 STOPWORDS = {
     'and', 'the', '&', 'of', 'in', 'at', 'on', 'for', 'by', 'corp', 'limited', 'pvt', 'ltd', 'inc', 'llc',
@@ -86,6 +86,15 @@ LEGAL_MAP = {
     r'\bsa\b': 'corp', r'\bsas\b': 'corp', r'\bsasu\b': 'corp',
     r'\beurl\b': 'corp', r'\bsci\b': 'corp', r'\bsnc\b': 'corp',
     r'\bgie\b': 'corp', r'\bearl\b': 'corp', r'\bgaec\b': 'corp',
+    # Indic transliterated forms
+    r'\bpraivet\b': 'corp', r'\bpraivrr\b': 'corp', r'\bpiraivet\b': 'corp',
+    r'\bpraibhet\b': 'corp', r'\bpraiveta\b': 'corp',
+    r'\blimirrd\b': 'corp', r'\blimitet\b': 'corp', r'\blimittad\b': 'corp',
+    r'\bprvt\b': 'corp', r'\bpvtltd\b': 'corp',
+    # Generic corporate abbreviations
+    r'\belelpi\b': 'corp',
+    r'\bpra\s*li\b': 'corp',
+    r'\bprali\b': 'corp',
 }
 
 FEATURE_NAMES = [
@@ -122,7 +131,9 @@ def indic_phonetic_skeleton(w):
     w = w.lower()
     w = re.sub(r'[^a-z0-9]', '', w)
     if len(w) <= 2: return w
-    w = w.replace('sh', 's').replace('ph', 'f').replace('ch', 'k').replace('c', 'k')
+    w = w.replace('sh', 's').replace('ph', 'f').replace('ch', 'k')
+    w = re.sub(r'c(?=[eiy])', 's', w)
+    w = w.replace('c', 'k')
     w = w.replace('q', 'k').replace('x', 'ks').replace('z', 's').replace('v', 'w').replace('b', 'w')
     w = re.sub(r'm(?=[tdks])', 'n', w)
     w = re.sub(r'(.)\1+', r'\1', w)
@@ -408,8 +419,11 @@ def macro_f05(gt_dict, pred_dict):
             scores.append((1.25 * p * r) / (0.25 * p + r) if p + r > 0 else 0.0)
     return float(np.mean(scores))
 
-def collective_resolve(pairs, probs, entity_ids, primary_threshold=0.85, secondary_threshold=0.88, margin=0.20,
-                       pair_features=None, s1_dict=None):
+def collective_resolve(pairs, probs, entity_ids, primary_threshold=None, secondary_threshold=None,
+                       pair_features=None, s1_dict=None, max_matches=12, **kwargs):
+    if primary_threshold is None:
+        primary_threshold = {'US': 0.980, 'India': 0.970, 'France': 0.970, 'default': 0.970}
+
     s1_candidates = {s: [] for s in entity_ids}
     cand_claims = {}
     
@@ -417,14 +431,8 @@ def collective_resolve(pairs, probs, entity_ids, primary_threshold=0.85, seconda
     def get_p_thresh(sid):
         if isinstance(primary_threshold, dict):
             c = s1_dict[sid]['country'] if s1_dict and sid in s1_dict else 'default'
-            return primary_threshold.get(c, primary_threshold.get('default', 0.85))
+            return primary_threshold.get(c, primary_threshold.get('default', 0.970))
         return primary_threshold
-
-    def get_s_thresh(sid):
-        if isinstance(secondary_threshold, dict):
-            c = s1_dict[sid]['country'] if s1_dict and sid in s1_dict else 'default'
-            return secondary_threshold.get(c, secondary_threshold.get('default', 0.88))
-        return secondary_threshold
 
     for idx, ((s1, c), p) in enumerate(zip(pairs, probs)):
         p_th = get_p_thresh(s1)
@@ -441,38 +449,7 @@ def collective_resolve(pairs, probs, entity_ids, primary_threshold=0.85, seconda
     for s1, cands in s1_candidates.items():
         if not cands: continue
         cands.sort(reverse=True, key=lambda x: x[1])
-        top_cand, top_prob, top_idx = cands[0]
-        if candidate_winner.get(top_cand) == s1:
-            final_matches[s1].append(top_cand)
-            
-        s_th = get_s_thresh(s1)
-        for c, p, idx in cands[1:]:
-            if len(final_matches[s1]) >= 6:
-                break
-            if candidate_winner.get(c) == s1 and p >= s_th and (top_prob - p) <= margin:
-                # Secondary multi-match quality guard:
-                if pair_features is not None:
-                    feat = pair_features[idx]
-                    nsm, alv = feat[8], feat[15]
-                    # Direct house number conflict (e.g. #8 vs #182 on different streets) -> reject
-                    if nsm == -1.0 and alv < 0.70:
-                        continue
-                    
-                    # If model probability is below 0.92, enforce explicit agreement guard
-                    if p < 0.92:
-                        nts, nlv, lex = feat[1], feat[2], feat[6]
-                        slv = feat[13]
-                        phs, cbs = feat[18], feat[19]
-                        name_agree = ((lex == 1.0 and (alv >= 0.40 or slv >= 0.40)) or 
-                                      (nts >= 0.80 and nlv >= 0.70) or 
-                                      (nts >= 0.88) or 
-                                      (phs >= 0.75) or 
-                                      (cbs >= 0.80))
-                        addr_agree = (nsm == 1.0 and alv >= 0.50) or (alv >= 0.75)
-                        if not (name_agree or addr_agree):
-                            continue
-                final_matches[s1].append(c)
-                
+        final_matches[s1] = [c for c, p, idx in cands if candidate_winner.get(c) == s1][:max_matches]
     return final_matches
 
 # ================================================================

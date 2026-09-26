@@ -1,0 +1,13 @@
+{
+  "overall_macro_f05": 0.9691,
+  "us_f05": 0.9784,
+  "india_f05": 0.9551,
+  "efp": 301,
+  "efn": 785,
+  "opt_th": {
+    "US": 0.975,
+    "India": 0.97,
+    "default": 0.96
+  },
+  "train_pairs": 594398
+}

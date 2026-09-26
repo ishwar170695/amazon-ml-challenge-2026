@@ -1,0 +1,56 @@
+{
+  "experiment": "soft_c_phonetic_normalization",
+  "description": "c(?=[eiy]) \u2192 s instead of c \u2192 k",
+  "baseline": {
+    "label": "BASELINE (c\u2192k)",
+    "blocking_recall": 0.9961672473867595,
+    "india_blocking_recall": 0.9926363724445306,
+    "val_macro_f05": 0.9736605553757889,
+    "val_us_f05": 0.978785809387162,
+    "val_india_f05": 0.9659341192884331,
+    "test_macro_f05": 0.9731649909867744,
+    "test_us_f05": 0.9782990605016691,
+    "test_india_f05": 0.9655150228649793,
+    "test_fps": 416,
+    "test_fns": 367,
+    "india_fps": 199,
+    "india_fns": 230,
+    "thresholds": {
+      "US": 0.98,
+      "India": 0.98,
+      "France": 0.9,
+      "default": 0.85
+    },
+    "val_pairs": 938234,
+    "test_pairs": 1860715,
+    "train_pairs": 270749
+  },
+  "treatment": {
+    "label": "SOFT-C (c\u2192s before e/i/y)",
+    "blocking_recall": 0.9961672473867595,
+    "india_blocking_recall": 0.9926363724445306,
+    "val_macro_f05": 0.9748732489421511,
+    "val_us_f05": 0.9796440510385818,
+    "val_india_f05": 0.9676811571157365,
+    "test_macro_f05": 0.9737641277715393,
+    "test_us_f05": 0.9792185234460891,
+    "test_india_f05": 0.9656368609098592,
+    "test_fps": 413,
+    "test_fns": 361,
+    "india_fps": 198,
+    "india_fns": 218,
+    "thresholds": {
+      "US": 0.98,
+      "India": 0.98,
+      "France": 0.9,
+      "default": 0.85
+    },
+    "val_pairs": 939528,
+    "test_pairs": 1861670,
+    "train_pairs": 270755
+  },
+  "collision_audit": {
+    "new_collisions": 31,
+    "resolved_collisions": 29
+  }
+}

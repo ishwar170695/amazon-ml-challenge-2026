@@ -1,0 +1,337 @@
+{
+  "experiment": "ab_sampler_121_ratio_vs_safeguards",
+  "baseline": {
+    "label": "Baseline Sampler (Current)",
+    "train_pairs": 270755,
+    "pos_cnt": 60867,
+    "neg_cnt": 209888,
+    "neg_pos_ratio": 3.4483053214385464,
+    "val_macro_f05": 0.9811048244932161,
+    "val_us_f05": 0.9869953691501822,
+    "val_india_f05": 0.9722246954867766,
+    "india_val_fps": 63,
+    "india_val_fns": 151,
+    "thresholds": {
+      "US": 0.995,
+      "India": 0.995,
+      "France": 0.9,
+      "default": 0.85
+    },
+    "fn_samples": [
+      {
+        "s1": "S1-988959302",
+        "s1_name": "anand solutions",
+        "s1_addr": "1451 sector 9 urban estate karnal haryana",
+        "cand": "S2-53826947",
+        "cand_name": "anmd solutions",
+        "cand_addr": "no 737 1451 karnal haryana"
+      },
+      {
+        "s1": "S1-988959302",
+        "s1_name": "anand solutions",
+        "s1_addr": "1451 sector 9 urban estate karnal haryana",
+        "cand": "S3-213601249",
+        "cand_name": "anand solutions corp",
+        "cand_addr": ""
+      },
+      {
+        "s1": "S1-988959302",
+        "s1_name": "anand solutions",
+        "s1_addr": "1451 sector 9 urban estate karnal haryana",
+        "cand": "S2-959280800",
+        "cand_name": "anmd solyusms",
+        "cand_addr": "737 1451 karnal haryana"
+      },
+      {
+        "s1": "S1-882583433",
+        "s1_name": "ram investments corp",
+        "s1_addr": "no 43 residency road banglore bangalore north bangalore karnataka",
+        "cand": "S3-253486702",
+        "cand_name": "riprivate com",
+        "cand_addr": "no 43 residency road banglore bangalore north bangalore ka"
+      },
+      {
+        "s1": "S1-370120136",
+        "s1_name": "global care corp",
+        "s1_addr": "29 a peace haven street andrews road bandra w mumbai mumbai city maharashtra",
+        "cand": "S3-910420163",
+        "cand_name": "globl keyr corp corp",
+        "cand_addr": "29 a bombay mh"
+      },
+      {
+        "s1": "S1-370120136",
+        "s1_name": "global care corp",
+        "s1_addr": "29 a peace haven street andrews road bandra w mumbai mumbai city maharashtra",
+        "cand": "S3-639258188",
+        "cand_name": "globl keyr corp corp",
+        "cand_addr": "29 a bombay mharastr"
+      },
+      {
+        "s1": "S1-370120136",
+        "s1_name": "global care corp",
+        "s1_addr": "29 a peace haven street andrews road bandra w mumbai mumbai city maharashtra",
+        "cand": "S3-508599430",
+        "cand_name": "globl keyr corp corp",
+        "cand_addr": "mh 29 a mumbai city"
+      }
+    ],
+    "fp_samples": [
+      {
+        "s1": "S1-603739052",
+        "s1_name": "meridian consulting corp",
+        "s1_addr": "56 jhandewalan road sf rani jhansi road new delhi central delhi delhi",
+        "cand": "S2-983518038",
+        "cand_name": "shree associates corp center",
+        "cand_addr": "56 jhandewalan road sf rani jhansi road new delhi delhi"
+      },
+      {
+        "s1": "S1-633020460",
+        "s1_name": "good producer corp",
+        "s1_addr": "f no 405 block b matrix majestic malkajgiri tirumalagiri hyderabad telangana",
+        "cand": "S2-604277262",
+        "cand_name": "golden prodyusr corp corp",
+        "cand_addr": "e block hyderabad telmgan"
+      },
+      {
+        "s1": "S1-733658132",
+        "s1_name": "shakti engineering corp",
+        "s1_addr": "thane west maharashtra thane office no 3 suvart apartment tembhi naka",
+        "cand": "S2-540124130",
+        "cand_name": "shakti care private corp",
+        "cand_addr": "plot no 3 survey no 90 4 91 2dam road villae manor taluka palghar dist thana 4 01403 maharashtra"
+      },
+      {
+        "s1": "S1-347869791",
+        "s1_name": "sky agro corp",
+        "s1_addr": "no 71 2 5th floor sona towers miller s road vasanthnagar bangalore karnataka",
+        "cand": "S2-281803835",
+        "cand_name": "sky arrgo corp",
+        "cand_addr": ""
+      },
+      {
+        "s1": "S1-663761814",
+        "s1_name": "map traders corp",
+        "s1_addr": "sf 30 14th avenue street market sector 16c gaur city 2 grater noida west gautam buddha nagar uttar pradesh",
+        "cand": "S3-553384051",
+        "cand_name": "xylojax",
+        "cand_addr": "14th avenue street market sector 16c gaur city 2 grater noida west sf 30 gautam buddha nagar uttar pradesh gautam buddha nagar"
+      }
+    ]
+  },
+  "exp_a_ratio_only": {
+    "label": "Exp A: 1:2:1 Ratio Only (Miner OFF)",
+    "train_pairs": 246359,
+    "pos_cnt": 60867,
+    "neg_cnt": 185492,
+    "neg_pos_ratio": 3.0474970016593557,
+    "val_macro_f05": 0.9776135156991764,
+    "val_us_f05": 0.9825713835912087,
+    "val_india_f05": 0.9701394179642473,
+    "india_val_fps": 82,
+    "india_val_fns": 123,
+    "thresholds": {
+      "US": 0.995,
+      "India": 0.995,
+      "France": 0.9,
+      "default": 0.85
+    },
+    "fn_samples": [
+      {
+        "s1": "S1-370120136",
+        "s1_name": "global care corp",
+        "s1_addr": "29 a peace haven street andrews road bandra w mumbai mumbai city maharashtra",
+        "cand": "S3-910420163",
+        "cand_name": "globl keyr corp corp",
+        "cand_addr": "29 a bombay mh"
+      },
+      {
+        "s1": "S1-370120136",
+        "s1_name": "global care corp",
+        "s1_addr": "29 a peace haven street andrews road bandra w mumbai mumbai city maharashtra",
+        "cand": "S3-639258188",
+        "cand_name": "globl keyr corp corp",
+        "cand_addr": "29 a bombay mharastr"
+      },
+      {
+        "s1": "S1-370120136",
+        "s1_name": "global care corp",
+        "s1_addr": "29 a peace haven street andrews road bandra w mumbai mumbai city maharashtra",
+        "cand": "S3-508599430",
+        "cand_name": "globl keyr corp corp",
+        "cand_addr": "mh 29 a mumbai city"
+      },
+      {
+        "s1": "S1-141165461",
+        "s1_name": "st india associates",
+        "s1_addr": "7 old court house street kolkata calcutta west bengal",
+        "cand": "S3-99304708",
+        "cand_name": "india st associates",
+        "cand_addr": "hnod 7 old court house street dalhousie kolkata calcutta wb"
+      },
+      {
+        "s1": "S1-587624307",
+        "s1_name": "arora sons corp",
+        "s1_addr": "np 356 1 nayapatti main road salt lake sector v po krishnapur kolkata parganas north west bengal",
+        "cand": "S2-18372059",
+        "cand_name": "lumvantage",
+        "cand_addr": "np 356 1 kolkata parganas north west bengal"
+      }
+    ],
+    "fp_samples": [
+      {
+        "s1": "S1-633020460",
+        "s1_name": "good producer corp",
+        "s1_addr": "f no 405 block b matrix majestic malkajgiri tirumalagiri hyderabad telangana",
+        "cand": "S2-604277262",
+        "cand_name": "golden prodyusr corp corp",
+        "cand_addr": "e block hyderabad telmgan"
+      },
+      {
+        "s1": "S1-420419120",
+        "s1_name": "newline onion india corp",
+        "s1_addr": "456 aggarwal metro heights netaji subhash place pitampura delhi north delhi delhi",
+        "cand": "S3-15575925",
+        "cand_name": "myagrocom",
+        "cand_addr": "office no 0451 aggarwal metro heights netaji subhash place pitampura delhi dilli"
+      },
+      {
+        "s1": "S1-686822721",
+        "s1_name": "ernakulam technology corp",
+        "s1_addr": "flat 11 a asset synergy heights ernakulam kerala",
+        "cand": "S2-198163085",
+        "cand_name": "ernakulam technology private corp",
+        "cand_addr": "hn 0066 33 2346b geethanjali road vyttila po ernakulam kerala"
+      },
+      {
+        "s1": "S1-289129046",
+        "s1_name": "galaxy technology corp",
+        "s1_addr": "new link road andheri west mumbai crystal plaza premises co op soc ltd e 108 lst floor mumbai city maharashtra",
+        "cand": "S2-640099827",
+        "cand_name": "galaxy technology corp",
+        "cand_addr": "no lst floor hkantilalcompoundandheri kurla road sakinaka near bata s howroom mumbai maharashtra"
+      },
+      {
+        "s1": "S1-347869791",
+        "s1_name": "sky agro corp",
+        "s1_addr": "no 71 2 5th floor sona towers miller s road vasanthnagar bangalore karnataka",
+        "cand": "S2-281803835",
+        "cand_name": "sky arrgo corp",
+        "cand_addr": ""
+      }
+    ]
+  },
+  "exp_b_safeguards": {
+    "label": "Exp B: 1:2:1 Ratio + Safeguards (Miner ON)",
+    "train_pairs": 246359,
+    "pos_cnt": 60867,
+    "neg_cnt": 185492,
+    "neg_pos_ratio": 3.0474970016593557,
+    "val_macro_f05": 0.9708829805181194,
+    "val_us_f05": 0.9769944117345505,
+    "val_india_f05": 0.9616698600383843,
+    "india_val_fps": 83,
+    "india_val_fns": 202,
+    "thresholds": {
+      "US": 0.995,
+      "India": 0.995,
+      "France": 0.9,
+      "default": 0.85
+    },
+    "fn_samples": [
+      {
+        "s1": "S1-988959302",
+        "s1_name": "anand solutions",
+        "s1_addr": "1451 sector 9 urban estate karnal haryana",
+        "cand": "S2-53826947",
+        "cand_name": "anmd solutions",
+        "cand_addr": "no 737 1451 karnal haryana"
+      },
+      {
+        "s1": "S1-979819836",
+        "s1_name": "softtech corp",
+        "s1_addr": "udaipur 165 a block rajasthan chitrakoot nagar bhuwana udaipur",
+        "cand": "S3-520961513",
+        "cand_name": "softtech",
+        "cand_addr": "165 a block udaipur rj"
+      },
+      {
+        "s1": "S1-979819836",
+        "s1_name": "softtech corp",
+        "s1_addr": "udaipur 165 a block rajasthan chitrakoot nagar bhuwana udaipur",
+        "cand": "S3-734913391",
+        "cand_name": "softtech corp",
+        "cand_addr": "165 a block udaipur rj"
+      },
+      {
+        "s1": "S1-370120136",
+        "s1_name": "global care corp",
+        "s1_addr": "29 a peace haven street andrews road bandra w mumbai mumbai city maharashtra",
+        "cand": "S3-910420163",
+        "cand_name": "globl keyr corp corp",
+        "cand_addr": "29 a bombay mh"
+      },
+      {
+        "s1": "S1-370120136",
+        "s1_name": "global care corp",
+        "s1_addr": "29 a peace haven street andrews road bandra w mumbai mumbai city maharashtra",
+        "cand": "S3-639258188",
+        "cand_name": "globl keyr corp corp",
+        "cand_addr": "29 a bombay mharastr"
+      },
+      {
+        "s1": "S1-370120136",
+        "s1_name": "global care corp",
+        "s1_addr": "29 a peace haven street andrews road bandra w mumbai mumbai city maharashtra",
+        "cand": "S3-508599430",
+        "cand_name": "globl keyr corp corp",
+        "cand_addr": "mh 29 a mumbai city"
+      }
+    ],
+    "fp_samples": [
+      {
+        "s1": "S1-603739052",
+        "s1_name": "meridian consulting corp",
+        "s1_addr": "56 jhandewalan road sf rani jhansi road new delhi central delhi delhi",
+        "cand": "S2-983518038",
+        "cand_name": "shree associates corp center",
+        "cand_addr": "56 jhandewalan road sf rani jhansi road new delhi delhi"
+      },
+      {
+        "s1": "S1-633020460",
+        "s1_name": "good producer corp",
+        "s1_addr": "f no 405 block b matrix majestic malkajgiri tirumalagiri hyderabad telangana",
+        "cand": "S2-604277262",
+        "cand_name": "golden prodyusr corp corp",
+        "cand_addr": "e block hyderabad telmgan"
+      },
+      {
+        "s1": "S1-447633176",
+        "s1_name": "om consultants",
+        "s1_addr": "tower f 2122 gaur sportswood noida gautam buddha nagar uttar pradesh",
+        "cand": "S3-326931900",
+        "cand_name": "or consultants corp",
+        "cand_addr": ""
+      },
+      {
+        "s1": "S1-733658132",
+        "s1_name": "shakti engineering corp",
+        "s1_addr": "thane west maharashtra thane office no 3 suvart apartment tembhi naka",
+        "cand": "S2-540124130",
+        "cand_name": "shakti care private corp",
+        "cand_addr": "plot no 3 survey no 90 4 91 2dam road villae manor taluka palghar dist thana 4 01403 maharashtra"
+      },
+      {
+        "s1": "S1-985480578",
+        "s1_name": "aparajita welfare society",
+        "s1_addr": "289 sector 56 gurgaon haryana",
+        "cand": "S2-882726956",
+        "cand_name": "payoniyr bildrs corp corp",
+        "cand_addr": "hno 566 sector 56 gurgaon haryana"
+      }
+    ]
+  },
+  "delta_a": -0.0034913087940396936,
+  "delta_b": -0.010221843975096734,
+  "validation_gate_passed": false,
+  "winner": "None (Baseline kept)"
+}

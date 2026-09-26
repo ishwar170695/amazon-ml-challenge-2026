@@ -1,0 +1,8 @@
+{
+  "fn_breakdown": {
+    "not_retrieved": 84,
+    "low_prob": 223,
+    "sub_threshold": 176,
+    "high_prob_dropped": 579
+  }
+}

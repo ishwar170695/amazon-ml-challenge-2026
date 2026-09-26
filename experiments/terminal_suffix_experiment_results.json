@@ -1,0 +1,56 @@
+{
+  "experiment": "terminal_suffix_phonetic_normalization",
+  "description": "(tion|sion|shn|dsn|tsn)$ \u2192 sn",
+  "baseline": {
+    "label": "BASELINE (c\u2192k)",
+    "blocking_recall": 0.9961672473867595,
+    "india_blocking_recall": 0.9926363724445306,
+    "val_macro_f05": 0.9736605553757889,
+    "val_us_f05": 0.978785809387162,
+    "val_india_f05": 0.9659341192884331,
+    "test_macro_f05": 0.9731649909867744,
+    "test_us_f05": 0.9782990605016691,
+    "test_india_f05": 0.9655150228649793,
+    "test_fps": 416,
+    "test_fns": 367,
+    "india_fps": 199,
+    "india_fns": 230,
+    "thresholds": {
+      "US": 0.98,
+      "India": 0.98,
+      "France": 0.9,
+      "default": 0.85
+    },
+    "val_pairs": 938234,
+    "test_pairs": 1860715,
+    "train_pairs": 270749
+  },
+  "treatment": {
+    "label": "TERMINAL SUFFIX",
+    "blocking_recall": 0.9961672473867595,
+    "india_blocking_recall": 0.9926363724445306,
+    "val_macro_f05": 0.9738117137523717,
+    "val_us_f05": 0.9790993447480622,
+    "val_india_f05": 0.9658404906966819,
+    "test_macro_f05": 0.9732757828541351,
+    "test_us_f05": 0.9795919435820039,
+    "test_india_f05": 0.9638644517297411,
+    "test_fps": 400,
+    "test_fns": 346,
+    "india_fps": 205,
+    "india_fns": 212,
+    "thresholds": {
+      "US": 0.98,
+      "India": 0.98,
+      "France": 0.9,
+      "default": 0.85
+    },
+    "val_pairs": 938017,
+    "test_pairs": 1860117,
+    "train_pairs": 270758
+  },
+  "collision_audit": {
+    "new_collisions": 2,
+    "resolved_collisions": 1
+  }
+}

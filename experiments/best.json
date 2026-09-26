@@ -1,14 +1,16 @@
 {
-  "best_iteration": "iter_012",
-  "macro_f05": 0.9543,
-  "india_f05": 0.9399,
-  "us_f05": 0.9638,
+  "best_iteration": "iter_020_transliterated_legal_suffixes",
+  "macro_f05": 0.9773,
+  "validation_f05": 0.9767,
+  "india_f05": 0.9688,
+  "us_f05": 0.9828,
   "thresholds": {
-    "US": 0.94,
-    "India": 0.94,
-    "France": 0.9,
-    "default": 0.85
+    "US": 0.98,
+    "India": 0.97,
+    "France": 0.97,
+    "default": 0.97
   },
-  "french_synthetic_accuracy": 1.0,
-  "status": "validated_3way_zero_leakage_real_data"
+  "max_matches": 12,
+  "normalization": "anyascii_with_indic_transliterated_legal_suffixes",
+  "status": "validated_zero_leakage_frozen_test"
 }

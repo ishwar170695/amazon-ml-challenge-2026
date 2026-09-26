@@ -1,0 +1,42 @@
+[
+  {
+    "name": "Variant 0: Baseline (0 Targeted Negatives)",
+    "extra_negs": 0,
+    "val_f05": 0.9587,
+    "test_macro_f05": 0.9643,
+    "us_f05": 0.9724,
+    "india_f05": 0.9518,
+    "efp": 432,
+    "efn": 900
+  },
+  {
+    "name": "Variant 1: 1x Hard Negatives (<=2 per S1)",
+    "extra_negs": 22121,
+    "val_f05": 0.9626,
+    "test_macro_f05": 0.9662,
+    "us_f05": 0.9744,
+    "india_f05": 0.9537,
+    "efp": 357,
+    "efn": 987
+  },
+  {
+    "name": "Variant 2: 2x Hard Negatives (<=4 per S1)",
+    "extra_negs": 39394,
+    "val_f05": 0.9626,
+    "test_macro_f05": 0.9662,
+    "us_f05": 0.9738,
+    "india_f05": 0.9545,
+    "efp": 339,
+    "efn": 1028
+  },
+  {
+    "name": "Variant 3: 5x Hard Negatives (<=10 per S1)",
+    "extra_negs": 76763,
+    "val_f05": 0.9622,
+    "test_macro_f05": 0.9652,
+    "us_f05": 0.9738,
+    "india_f05": 0.952,
+    "efp": 327,
+    "efn": 1087
+  }
+]

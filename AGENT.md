@@ -389,6 +389,29 @@ The test set must not be used to optimize:
 - blocking parameters
 - post-processing
 
+## 8.1 Enforcement Guardrail (mandatory)
+
+This rule has been violated in practice by ad hoc diagnostic scripts (e.g. a
+one-off sweep computing F0.5 across a range of thresholds directly against a
+held-out/test split "just to look"). A rule that is only documented and not
+enforced will be violated again under time pressure.
+
+Any script, notebook cell, or one-liner that computes precision / recall /
+F0.5 against a named split MUST:
+
+- take an explicit `split_name` argument or variable, and
+- refuse to execute a threshold/margin/hyperparameter sweep against any
+  variable, file, or split named (or aliased to) `test`, `held_out`,
+  `heldout`, or equivalent, unless an explicit override flag is passed
+  (e.g. `--i-know-this-contaminates-test`), and
+- log any such override to the experiment ledger, since a test split that
+  has been swept over for tuning purposes is no longer valid evidence and
+  must be flagged as contaminated going forward.
+
+If a test split is ever contaminated this way, do not silently keep using
+it as if it were still clean. Either re-draw a fresh held-out split or
+explicitly document the contamination and its scope in the ledger.
+
 ---
 
 # 9. Threshold Sweep
@@ -415,6 +438,11 @@ Flag:
 Do not assume that a non-flat sweep proves validity.
 
 Threshold behavior is diagnostic evidence, not proof of generalization.
+
+Threshold sweeps for the purpose of *selecting* a threshold must only ever
+be run against validation data (see Section 8.1). Sweeps run against test
+data are diagnostic-only, must be explicitly labeled as such, and must not
+feed back into any parameter choice.
 
 ---
 
@@ -607,11 +635,39 @@ Possible categories:
 - threshold failure
 - singleton error
 - one-to-many error
+- **guard override failure** (a hand-written heuristic/veto suppressed or
+  overrode a high-confidence, correct model prediction — see 15.1)
 - unknown failure mode
 
 Do not merely dump examples.
 
 Reason about patterns.
+
+## 15.1 Guard Override Failure Mode (mandatory check)
+
+This has been observed in practice: a large majority of false negatives
+(87.7% in one iteration) had model confidence P ≥ 0.88 — often P > 0.999 —
+but were blocked by a rigid, hand-written string-similarity guard. The
+guard was net-negative: it suppressed correct, high-confidence model
+output rather than protecting against errors.
+
+Whenever any manual guard, veto, or acceptance rule sits downstream of the
+classifier (secondary-match guards, margin rules, house-number veto,
+name/address agreement checks, etc.), every iteration that touches that
+logic MUST additionally report:
+
+- the fraction of false negatives that had model probability above a
+  "should have been trusted" bar (e.g. P ≥ 0.90),
+- whether those suppressions were concentrated in a specific guard or
+  rule,
+- what happens to precision if that guard is loosened or removed
+  entirely, evaluated on validation (never test) before any change is
+  kept.
+
+A guard should be treated with the same suspicion as a dominant feature
+(Section 19): understand *why* it exists, whether it is still earning its
+keep, and whether it is now costing more recall than it protects in
+precision.
 
 ---
 
@@ -660,6 +716,9 @@ Possible methods:
 - locality/city
 - postcode
 - address tokens
+- distinctive/long address tokens (excluding generic address stopwords —
+  this recovered rebranded-business and phonetic-drift cases that
+  standard name/address blockers missed)
 - approximate retrieval
 - MinHash/LSH where justified
 
@@ -691,6 +750,8 @@ Potential name features:
 - character n-gram TF-IDF cosine
 - shared-token count
 - length ratio
+- phonetic skeleton similarity
+- compact-brand similarity
 
 Potential address features:
 
@@ -705,6 +766,7 @@ Potential address features:
 - address-component agreement
 - length ratio
 - missingness indicators
+- unit/suite key agreement
 
 Potential cross-field features:
 
@@ -747,6 +809,13 @@ Ask:
 
 A dominant feature is not automatically invalid, but it must be understood.
 
+TF-IDF-derived features (word/char cosine) are fit on a specific corpus
+vocabulary. When the underlying corpus changes (synthetic → real, or a
+newly added open-set country's vocabulary is merged in), these features
+must be refit and re-audited — a large importance weight carried over from
+a stale vocabulary fit is itself a form of silent drift and should be
+treated with the same suspicion as any other dominant feature.
+
 ---
 
 # 20. Model Strategy
@@ -777,6 +846,27 @@ Model complexity must justify itself through:
 - acceptable runtime
 - acceptable memory
 
+## 20.1 Ensembling (mandatory checks when used)
+
+If multiple models are combined (e.g. bagging/seed-averaging, varied
+tree depth/leaves/column-subsampling), the following must be reported
+in addition to the standard evaluation gate:
+
+- per-model metrics individually, alongside the ensemble metric — never
+  report only the ensemble number,
+- whether the ensemble gain persists on an expanded held-out sample, not
+  just the original (often small) held-out split — a gain measured on a
+  few thousand entities can be within sampling noise,
+- an explicit check of whether the gain is better attributed to variance
+  reduction (probability averaging smoothing out individual-model noise)
+  versus genuinely different signal captured by different models,
+- the added runtime/memory cost of serving N models versus one, and
+  whether that cost is justified by the measured gain (Section 30/31
+  compute discipline still applies to ensembles).
+
+An ensemble gain that cannot be shown to survive a larger sample should be
+treated as INVESTIGATE, not KEEP, until re-confirmed.
+
 ---
 
 # 21. One-to-Many Matching
@@ -798,6 +888,13 @@ Inspect:
 - same-name/different-location cases
 
 Do not introduce extra-match heuristics without validation.
+
+Prefer, where feasible, evaluating whether a global/collective assignment
+step (e.g. min-cost bipartite matching over ambiguous multi-candidate
+clusters) recovers cases that a purely greedy top-1-then-margin-based
+secondary acceptance rule misses. A greedy resolver is a reasonable
+starting point but is not guaranteed to find the globally optimal
+one-to-many assignment.
 
 ---
 
@@ -839,6 +936,32 @@ Never implement logic equivalent to:
         reject
 
 unless explicitly justified by the problem.
+
+## 23.1 Open-Set Validation Protocol (required practice)
+
+Because an open-set country may have zero ground truth anywhere in the
+training data, standard held-out evaluation is not possible for it. The
+required protocol, established in practice for France and to be reused
+for any future unseen country/segment, is:
+
+1. Confirm via direct data audit whether the country appears in train at
+   all (record counts, do not assume).
+2. If absent, construct a synthetic stress test using real records and
+   real address/name patterns *extracted from the actual test-set
+   entities for that country* — not fully synthetic invented data — with
+   manually constructed positive and negative pairs.
+3. Explicitly label this evaluation as a synthetic proxy, not equivalent
+   in strength to a real held-out numeric result (a small hand-built
+   stress test, e.g. 8 pairs, demonstrates the model isn't confused by
+   the country's orthography/legal forms — it does not establish that
+   real recall/precision matches the numbers seen on countries with
+   ground truth).
+4. Scale the stress test up (hundreds+ pairs, not a handful) before
+   treating a "100% accuracy" result on it as strong evidence rather than
+   a sanity check.
+5. Separately verify blocking recall for the open-set country using the
+   same synthetic-pairs-against-real-distractors method, since blocking
+   failures are invisible to a classifier-only stress test.
 
 ---
 
@@ -924,6 +1047,10 @@ Examples:
 - unseen country
 - duplicate branch
 - previously discovered leakage pattern
+- guard override (a high-confidence correct prediction suppressed by a
+  hand-written heuristic/veto — see 15.1)
+- test-set threshold contamination (a sweep or tuning step run against a
+  supposedly-frozen test split — see 8.1)
 
 Future changes must not silently reintroduce known failures.
 
@@ -968,6 +1095,10 @@ Decision:
     HUMAN_REVIEW
 
 Never lose experiment history.
+
+Any test-split contamination event (Section 8.1) or guard-override finding
+(Section 15.1) must be explicitly recorded in the ledger, not folded
+silently into the general notes.
 
 ---
 
@@ -1130,6 +1261,10 @@ Do not self-resolve when:
 
 7. A major architecture change is required to handle an unresolved issue.
 
+8. A test split is discovered to have been contaminated (Section 8.1) and
+   it is unclear whether a fresh split can be drawn without re-leaking
+   entities already seen.
+
 When escalating, provide:
 
     Problem:
@@ -1164,6 +1299,7 @@ After EVERY meaningful iteration, output:
     Main FP categories:
     False negatives sampled:
     Main FN categories:
+    Guard override findings (if applicable):
 
     FEATURE AUDIT
     Dominant features:
@@ -1173,6 +1309,7 @@ After EVERY meaningful iteration, output:
     Split leakage:
     Generator coupling:
     Feature leakage:
+    Test-split contamination status:
 
     ROBUSTNESS
     Adversarial evaluation:
