@@ -234,10 +234,11 @@ def build_blocking_candidates(df_s1: pd.DataFrame, df_candidates: pd.DataFrame):
     return pairs, cand_dict_per_s1
 
 # ---------------------------------------------------------------------
-# Pairwise Feature Extraction (15 Features)
+# Pairwise Feature Extraction (16 Decomposed Features, with Move A Char TF-IDF)
 # ---------------------------------------------------------------------
-def extract_pairwise_features(pairs, df_s1_dict, df_cand_dict, s1_tfidf_map, cand_tfidf_map):
+def extract_pairwise_features(pairs, df_s1_dict, df_cand_dict, s1_tfidf_map, cand_tfidf_map, s1_char_tfidf_map=None, cand_char_tfidf_map=None):
     features = []
+    has_char_tfidf = (s1_char_tfidf_map is not None and cand_char_tfidf_map is not None)
     for s1_id, c_id in pairs:
         r1 = df_s1_dict[s1_id]
         r2 = df_cand_dict[c_id]
@@ -252,6 +253,7 @@ def extract_pairwise_features(pairs, df_s1_dict, df_cand_dict, s1_tfidf_map, can
         name_lev = levenshtein_ratio(n1, n2)
         name_char3 = char_ngram_jaccard(n1, n2, 3)
         tfidf_sim = float(cosine_similarity(s1_tfidf_map[s1_id], cand_tfidf_map[c_id])[0, 0])
+        char_tfidf_sim = float(cosine_similarity(s1_char_tfidf_map[s1_id], cand_char_tfidf_map[c_id])[0, 0]) if has_char_tfidf else name_char3
         legal_stripped_exact = 1.0 if r1['stripped_name'] and r1['stripped_name'] == r2['stripped_name'] else 0.0
         acronym_match = 1.0 if (r1['acronyms'] & r2['acronyms']) else 0.0
 
@@ -276,14 +278,14 @@ def extract_pairwise_features(pairs, df_s1_dict, df_cand_dict, s1_tfidf_map, can
         len_diff = abs(len(n1) - len(n2)) / max(len(n1), len(n2), 1)
 
         features.append([
-            tok_jac, tok_sort, name_lev, name_char3, tfidf_sim, legal_stripped_exact, acronym_match,
+            tok_jac, tok_sort, name_lev, name_char3, tfidf_sim, char_tfidf_sim, legal_stripped_exact, acronym_match,
             num_score, missing_num, pin_score, missing_pin, loc_jac, street_lev,
             addr_char3, len_diff
         ])
 
     cols = [
         'name_tok_jaccard', 'name_token_sort', 'name_lev_ratio', 'name_char3_jaccard',
-        'tfidf_name_cosine', 'legal_stripped_exact', 'acronym_match', 'street_num_match',
+        'tfidf_name_cosine', 'tfidf_char_cosine', 'legal_stripped_exact', 'acronym_match', 'street_num_match',
         'missing_num_ind', 'postcode_match', 'missing_postcode_ind', 'locality_jaccard',
         'street_body_lev', 'addr_char3_jaccard', 'name_len_diff'
     ]
@@ -594,12 +596,16 @@ def run_pipeline(demo_mode: bool = True):
         df['parsed_addr'] = df['business_address'].apply(parse_address_components)
         df['stripped_name'] = df['norm_name'].apply(strip_legal_suffixes)
 
-    # Global Corpus TF-IDF Fit
-    print("  Fitting Global TF-IDF Vectorizer across all business names...")
+    # Global Corpus Word & Sublinear Char-wb TF-IDF Fit
+    print("  Fitting Global Word & Sublinear Char-wb TF-IDF Vectorizers across all business names...")
     all_names = list(df_s1['norm_name']) + list(df_candidates['norm_name'])
     tfidf = TfidfVectorizer(ngram_range=(1, 2), min_df=1).fit(all_names)
     s1_tfidf_map = {row['entity_id']: tfidf.transform([row['norm_name']]) for _, row in df_s1.iterrows()}
     cand_tfidf_map = {row['entity_id']: tfidf.transform([row['norm_name']]) for _, row in df_candidates.iterrows()}
+
+    char_tfidf = TfidfVectorizer(analyzer='char_wb', ngram_range=(3, 5), sublinear_tf=True, min_df=1).fit(all_names)
+    s1_char_tfidf_map = {row['entity_id']: char_tfidf.transform([row['norm_name']]) for _, row in df_s1.iterrows()}
+    cand_char_tfidf_map = {row['entity_id']: char_tfidf.transform([row['norm_name']]) for _, row in df_candidates.iterrows()}
 
     # Step 3: Multi-Key Blocking (Token-Set + Prefix + Acronym)
     print("\n[3/6] Candidate Generation: Token-Set + Prefix + Acronym Inverted Index...")
@@ -616,11 +622,11 @@ def run_pipeline(demo_mode: bool = True):
     print(f"  Candidate Pairs Generated: {len(pairs):,} (Reduction: {reduction:.2f}%)")
     print(f"  Blocking Recall:            {blocking_recall*100:.2f}% ({captured}/{len(flat_gt_pairs)} true links retained)")
 
-    # Step 4: Feature Extraction (15 Features)
-    print("\n[4/6] Extracting 15 Decomposed Address, TF-IDF & Acronym Features...")
+    # Step 4: Feature Extraction (16 Features)
+    print("\n[4/6] Extracting 16 Decomposed Address, Word TF-IDF, Char-wb TF-IDF & Acronym Features...")
     df_s1_dict = df_s1.set_index('entity_id').to_dict(orient='index')
     df_cand_dict = df_candidates.set_index('entity_id').to_dict(orient='index')
-    X = extract_pairwise_features(pairs, df_s1_dict, df_cand_dict, s1_tfidf_map, cand_tfidf_map)
+    X = extract_pairwise_features(pairs, df_s1_dict, df_cand_dict, s1_tfidf_map, cand_tfidf_map, s1_char_tfidf_map, cand_char_tfidf_map)
 
     y = np.array([1 if p in flat_gt_pairs else 0 for p in pairs])
     print(f"  Features shape: {X.shape}, Positives: {y.sum():,}, Hard Negatives: {(y == 0).sum():,}")

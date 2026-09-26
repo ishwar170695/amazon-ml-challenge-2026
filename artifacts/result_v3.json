@@ -1,0 +1,102 @@
+{
+  "best_pairwise_threshold": 0.9,
+  "best_pairwise_f05": 0.9404744090808952,
+  "best_collective_threshold": 0.85,
+  "best_collective_f05": 0.9509286545447525,
+  "n_fps": 534,
+  "n_fns": 955,
+  "blocking_recall": {
+    "India": [
+      6317,
+      6841,
+      92.34
+    ],
+    "US": [
+      10175,
+      10378,
+      98.04
+    ]
+  },
+  "per_country_f05": {
+    "India": 0.9225,
+    "US": 0.97
+  },
+  "sweep": [
+    {
+      "threshold": 0.2,
+      "pairwise_f05": 0.8173493618058674,
+      "collective_f05": 0.9218743438284255
+    },
+    {
+      "threshold": 0.25,
+      "pairwise_f05": 0.8355355049740901,
+      "collective_f05": 0.9236743438284255
+    },
+    {
+      "threshold": 0.3,
+      "pairwise_f05": 0.8486298250526012,
+      "collective_f05": 0.9242743438284254
+    },
+    {
+      "threshold": 0.35,
+      "pairwise_f05": 0.8608663066805242,
+      "collective_f05": 0.9252743438284254
+    },
+    {
+      "threshold": 0.4,
+      "pairwise_f05": 0.8727225952135071,
+      "collective_f05": 0.9282743438284254
+    },
+    {
+      "threshold": 0.45,
+      "pairwise_f05": 0.8829720505309222,
+      "collective_f05": 0.9301632327173145
+    },
+    {
+      "threshold": 0.5,
+      "pairwise_f05": 0.8909355604413005,
+      "collective_f05": 0.9309632327173145
+    },
+    {
+      "threshold": 0.55,
+      "pairwise_f05": 0.8981283939324312,
+      "collective_f05": 0.9319242716783533
+    },
+    {
+      "threshold": 0.6,
+      "pairwise_f05": 0.9041604076472608,
+      "collective_f05": 0.9323242716783534
+    },
+    {
+      "threshold": 0.65,
+      "pairwise_f05": 0.9091872250018572,
+      "collective_f05": 0.9327242716783534
+    },
+    {
+      "threshold": 0.7,
+      "pairwise_f05": 0.9148996139608735,
+      "collective_f05": 0.9337814145354963
+    },
+    {
+      "threshold": 0.75,
+      "pairwise_f05": 0.9202058796545832,
+      "collective_f05": 0.9388229091508691
+    },
+    {
+      "threshold": 0.8,
+      "pairwise_f05": 0.9264588084410221,
+      "collective_f05": 0.944180647798353
+    },
+    {
+      "threshold": 0.85,
+      "pairwise_f05": 0.9323700566447108,
+      "collective_f05": 0.9509286545447525
+    },
+    {
+      "threshold": 0.9,
+      "pairwise_f05": 0.9404744090808952,
+      "collective_f05": 0.6815618464868465
+    }
+  ],
+  "total_runtime_s": 173.7
+}
