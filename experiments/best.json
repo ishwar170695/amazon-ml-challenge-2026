@@ -1,8 +1,8 @@
 {
   "best_iteration": "iter_012",
-  "macro_f05": 0.9509,
-  "india_f05": 0.9385,
-  "us_f05": 0.959,
+  "macro_f05": 0.9543,
+  "india_f05": 0.9399,
+  "us_f05": 0.9638,
   "thresholds": {
     "US": 0.94,
     "India": 0.94,

@@ -134,6 +134,7 @@ def clean_compact_brand(name):
     n = re.sub(r'\b(m\s*/\s*s|ms|dr|sri|shri|shree|om|smt|the)\b', ' ', n)
     n = re.sub(r'\b(corp|corporation|incorporated|inc|ltd|limited|pvt|private|llc|llp|elelpi|com|in|net|org)\b', ' ', n)
     clean = re.sub(r'[^a-z0-9]', '', n)
+    clean = re.sub(r'^(llc|inc|corp|ltd|pvt)', '', clean)
     return clean if len(clean) >= 5 else ''
 
 def extract_unit_keys(addr):
@@ -217,7 +218,9 @@ def get_distinctive_addr_tokens(norm_addr):
 
 def get_addr_numbers(t):
     if not isinstance(t, str): return set()
-    return set(re.findall(r'(?<!\d)\d{2,6}(?!\d)', t))
+    nums = set(re.findall(r'(?<!\d)\d{2,6}(?!\d)', t))
+    nums.update({n.lstrip('0') for n in nums if len(n.lstrip('0')) >= 2})
+    return nums
 
 def get_house_codes(t):
     if not isinstance(t, str): return set()
@@ -450,21 +453,24 @@ def collective_resolve(pairs, probs, entity_ids, primary_threshold=0.85, seconda
                 # Secondary multi-match quality guard:
                 if pair_features is not None:
                     feat = pair_features[idx]
-                    nts, nlv, lex = feat[1], feat[2], feat[6]
-                    nsm, slv, alv = feat[8], feat[13], feat[15]
-                    phs, cbs = feat[18], feat[19]
+                    nsm, alv = feat[8], feat[15]
                     # Direct house number conflict (e.g. #8 vs #182 on different streets) -> reject
                     if nsm == -1.0 and alv < 0.70:
                         continue
-                    # Must have both name coherence and address coherence
-                    name_agree = ((lex == 1.0 and (alv >= 0.40 or slv >= 0.40)) or 
-                                  (nts >= 0.80 and nlv >= 0.70) or 
-                                  (nts >= 0.88) or 
-                                  (phs >= 0.75) or 
-                                  (cbs >= 0.80))
-                    addr_agree = (nsm == 1.0 and alv >= 0.50) or (alv >= 0.75)
-                    if not (name_agree or addr_agree):
-                        continue
+                    
+                    # If model probability is below 0.92, enforce explicit agreement guard
+                    if p < 0.92:
+                        nts, nlv, lex = feat[1], feat[2], feat[6]
+                        slv = feat[13]
+                        phs, cbs = feat[18], feat[19]
+                        name_agree = ((lex == 1.0 and (alv >= 0.40 or slv >= 0.40)) or 
+                                      (nts >= 0.80 and nlv >= 0.70) or 
+                                      (nts >= 0.88) or 
+                                      (phs >= 0.75) or 
+                                      (cbs >= 0.80))
+                        addr_agree = (nsm == 1.0 and alv >= 0.50) or (alv >= 0.75)
+                        if not (name_agree or addr_agree):
+                            continue
                 final_matches[s1].append(c)
                 
     return final_matches
