@@ -47,6 +47,8 @@ from rapidfuzz import fuzz
 import anyascii
 import re
 import unicodedata
+import warnings
+warnings.filterwarnings('ignore')
 
 # ----------------------------------------------------------------------
 # 1. ROBUST PATH AUTO-DETECTION
@@ -330,6 +332,7 @@ def main():
     with open(model_file, 'rb') as f:
         artifacts = pickle.load(f)
     clf = artifacts['model']
+    booster = clf.booster_ if hasattr(clf, 'booster_') else clf
     word_vec = artifacts['word_tfidf']
     char_vec = artifacts['char_tfidf']
     thresh_config = artifacts.get('thresholds', {'US': 0.98, 'India': 0.97, 'France': 0.97, 'default': 0.97})
@@ -398,6 +401,9 @@ def main():
         for sf in [s2_file, s3_file]:
             sf_t0 = time.time()
             cnt = 0
+            sf_name = os.path.basename(sf)
+            print(f"      >>> START INDEXING {sf_name}...", flush=True)
+
             with open(sf, 'r', encoding='utf-8') as f:
                 f.readline()
                 for line in f:
@@ -430,20 +436,60 @@ def main():
                             anums, hcs, dat
                         ))
 
-                        for tok in st: inv.setdefault(('T', tok), array.array('I')).append(c_idx)
-                        for num in anums: inv.setdefault(('N', num), array.array('I')).append(c_idx)
-                        for h in hcs: inv.setdefault(('H', h), array.array('I')).append(c_idx)
-                        for a in acr: inv.setdefault(('A', a), array.array('I')).append(c_idx)
-                        for ph in pht: inv.setdefault(('PH', ph), array.array('I')).append(c_idx)
-                        for uk in uks: inv.setdefault(('UK', uk), array.array('I')).append(c_idx)
-                        if cb: inv.setdefault(('CB', cb[:8]), array.array('I')).append(c_idx)
-                        for atok in dat: inv.setdefault(('AT', atok), array.array('I')).append(c_idx)
-                        if len(nn) >= 3: inv.setdefault(('P', nn[:3]), array.array('I')).append(c_idx)
+                        # Capped posting insertions: stops growing arrays when posting list exceeds limit
+                        for tok in st:
+                            k = ('T', tok); lst = inv.get(k)
+                            if lst is None: inv[k] = array.array('I', [c_idx])
+                            elif len(lst) <= 80: lst.append(c_idx)
+
+                        for num in anums:
+                            k = ('N', num); lst = inv.get(k)
+                            if lst is None: inv[k] = array.array('I', [c_idx])
+                            elif len(lst) <= 80: lst.append(c_idx)
+
+                        for h in hcs:
+                            k = ('H', h); lst = inv.get(k)
+                            if lst is None: inv[k] = array.array('I', [c_idx])
+                            elif len(lst) <= 80: lst.append(c_idx)
+
+                        for a in acr:
+                            k = ('A', a); lst = inv.get(k)
+                            if lst is None: inv[k] = array.array('I', [c_idx])
+                            elif len(lst) <= 80: lst.append(c_idx)
+
+                        for ph in pht:
+                            k = ('PH', ph); lst = inv.get(k)
+                            if lst is None: inv[k] = array.array('I', [c_idx])
+                            elif len(lst) <= 60: lst.append(c_idx)
+
+                        for uk in uks:
+                            k = ('UK', uk); lst = inv.get(k)
+                            if lst is None: inv[k] = array.array('I', [c_idx])
+                            elif len(lst) <= 80: lst.append(c_idx)
+
+                        if cb:
+                            k = ('CB', cb[:8]); lst = inv.get(k)
+                            if lst is None: inv[k] = array.array('I', [c_idx])
+                            elif len(lst) <= 80: lst.append(c_idx)
+
+                        for atok in dat:
+                            k = ('AT', atok); lst = inv.get(k)
+                            if lst is None: inv[k] = array.array('I', [c_idx])
+                            elif len(lst) <= 60: lst.append(c_idx)
+
+                        if len(nn) >= 3:
+                            k = ('P', nn[:3]); lst = inv.get(k)
+                            if lst is None: inv[k] = array.array('I', [c_idx])
+                            elif len(lst) <= 40: lst.append(c_idx)
 
                         cnt += 1
+                        if cnt % 500000 == 0:
+                            print(f"          ... indexed {cnt:,} candidates from {sf_name} ({time.time()-sf_t0:.1f}s)", flush=True)
+
                         if args.limit and cnt >= args.limit * 5:
                             break
-            print(f"      Indexed {cnt:,} candidates from {os.path.basename(sf)} in {time.time()-sf_t0:.1f}s", flush=True)
+
+            print(f"      <<< FINISHED {sf_name}: {cnt:,} candidates in {time.time()-sf_t0:.1f}s", flush=True)
 
         inv_pruned = {}
         for k, v in inv.items():
@@ -601,7 +647,7 @@ def main():
                 all_probs = []
                 for p_start in range(0, n_pairs, 100000):
                     X_sub = X[p_start : p_start + 100000]
-                    p_sub = clf.predict_proba(X_sub)[:, 1]
+                    p_sub = booster.predict(X_sub)
                     all_probs.append(p_sub)
                 probs = np.concatenate(all_probs)
                 del X, all_probs
