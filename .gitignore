@@ -8,3 +8,5 @@ dataset/
 *.log
 *.zip
 6ab10eb3b23ba_student_resource/
+scratch/
+*.pkl

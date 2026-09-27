@@ -1,0 +1,293 @@
+{
+  "audit": "prefilter_recall_sensitivity",
+  "baseline_blocked_gt_pairs": 25805,
+  "results_by_threshold": {
+    "thresh_40": {
+      "all": {
+        "total": 25805,
+        "survived": 25762,
+        "dropped": 43,
+        "pct": 99.8333656268165
+      },
+      "low_name_sim_lt60": {
+        "total": 2354,
+        "survived": 2311,
+        "dropped": 43,
+        "pct": 98.1733220050977
+      },
+      "dba_acronym": {
+        "total": 22019,
+        "survived": 21994,
+        "dropped": 25,
+        "pct": 99.88646169217495
+      },
+      "hierarchy_brand": {
+        "total": 14252,
+        "survived": 14252,
+        "dropped": 0,
+        "pct": 100.0
+      },
+      "transliteration": {
+        "total": 3483,
+        "survived": 3479,
+        "dropped": 4,
+        "pct": 99.88515647430376
+      },
+      "low_name_sim_lt50": {
+        "total": 1091,
+        "survived": 1048,
+        "dropped": 43,
+        "pct": 96.05866177818515
+      },
+      "low_name_sim_lt40": {
+        "total": 579,
+        "survived": 536,
+        "dropped": 43,
+        "pct": 92.573402417962
+      },
+      "missing_address": {
+        "total": 1129,
+        "survived": 1127,
+        "dropped": 2,
+        "pct": 99.82285208148805
+      },
+      "low_name_sim_lt30": {
+        "total": 407,
+        "survived": 376,
+        "dropped": 31,
+        "pct": 92.38329238329239
+      }
+    },
+    "thresh_35": {
+      "all": {
+        "total": 25805,
+        "survived": 25768,
+        "dropped": 37,
+        "pct": 99.85661693470259
+      },
+      "low_name_sim_lt60": {
+        "total": 2354,
+        "survived": 2317,
+        "dropped": 37,
+        "pct": 98.42820730671198
+      },
+      "dba_acronym": {
+        "total": 22019,
+        "survived": 21996,
+        "dropped": 23,
+        "pct": 99.89554475680094
+      },
+      "hierarchy_brand": {
+        "total": 14252,
+        "survived": 14252,
+        "dropped": 0,
+        "pct": 100.0
+      },
+      "transliteration": {
+        "total": 3483,
+        "survived": 3481,
+        "dropped": 2,
+        "pct": 99.94257823715188
+      },
+      "low_name_sim_lt50": {
+        "total": 1091,
+        "survived": 1054,
+        "dropped": 37,
+        "pct": 96.60861594867094
+      },
+      "low_name_sim_lt40": {
+        "total": 579,
+        "survived": 542,
+        "dropped": 37,
+        "pct": 93.60967184801382
+      },
+      "missing_address": {
+        "total": 1129,
+        "survived": 1127,
+        "dropped": 2,
+        "pct": 99.82285208148805
+      },
+      "low_name_sim_lt30": {
+        "total": 407,
+        "survived": 376,
+        "dropped": 31,
+        "pct": 92.38329238329239
+      }
+    },
+    "thresh_30": {
+      "all": {
+        "total": 25805,
+        "survived": 25774,
+        "dropped": 31,
+        "pct": 99.87986824258864
+      },
+      "low_name_sim_lt60": {
+        "total": 2354,
+        "survived": 2323,
+        "dropped": 31,
+        "pct": 98.68309260832625
+      },
+      "dba_acronym": {
+        "total": 22019,
+        "survived": 21999,
+        "dropped": 20,
+        "pct": 99.90916935373995
+      },
+      "hierarchy_brand": {
+        "total": 14252,
+        "survived": 14252,
+        "dropped": 0,
+        "pct": 100.0
+      },
+      "transliteration": {
+        "total": 3483,
+        "survived": 3481,
+        "dropped": 2,
+        "pct": 99.94257823715188
+      },
+      "low_name_sim_lt50": {
+        "total": 1091,
+        "survived": 1060,
+        "dropped": 31,
+        "pct": 97.15857011915674
+      },
+      "low_name_sim_lt40": {
+        "total": 579,
+        "survived": 548,
+        "dropped": 31,
+        "pct": 94.64594127806562
+      },
+      "missing_address": {
+        "total": 1129,
+        "survived": 1128,
+        "dropped": 1,
+        "pct": 99.91142604074402
+      },
+      "low_name_sim_lt30": {
+        "total": 407,
+        "survived": 376,
+        "dropped": 31,
+        "pct": 92.38329238329239
+      }
+    },
+    "thresh_25": {
+      "all": {
+        "total": 25805,
+        "survived": 25780,
+        "dropped": 25,
+        "pct": 99.90311955047471
+      },
+      "low_name_sim_lt60": {
+        "total": 2354,
+        "survived": 2329,
+        "dropped": 25,
+        "pct": 98.93797790994053
+      },
+      "dba_acronym": {
+        "total": 22019,
+        "survived": 22003,
+        "dropped": 16,
+        "pct": 99.92733548299196
+      },
+      "hierarchy_brand": {
+        "total": 14252,
+        "survived": 14252,
+        "dropped": 0,
+        "pct": 100.0
+      },
+      "transliteration": {
+        "total": 3483,
+        "survived": 3481,
+        "dropped": 2,
+        "pct": 99.94257823715188
+      },
+      "low_name_sim_lt50": {
+        "total": 1091,
+        "survived": 1066,
+        "dropped": 25,
+        "pct": 97.70852428964253
+      },
+      "low_name_sim_lt40": {
+        "total": 579,
+        "survived": 554,
+        "dropped": 25,
+        "pct": 95.68221070811744
+      },
+      "missing_address": {
+        "total": 1129,
+        "survived": 1129,
+        "dropped": 0,
+        "pct": 100.0
+      },
+      "low_name_sim_lt30": {
+        "total": 407,
+        "survived": 382,
+        "dropped": 25,
+        "pct": 93.85749385749385
+      }
+    },
+    "thresh_20": {
+      "all": {
+        "total": 25805,
+        "survived": 25792,
+        "dropped": 13,
+        "pct": 99.94962216624685
+      },
+      "low_name_sim_lt60": {
+        "total": 2354,
+        "survived": 2341,
+        "dropped": 13,
+        "pct": 99.44774851316907
+      },
+      "dba_acronym": {
+        "total": 22019,
+        "survived": 22011,
+        "dropped": 8,
+        "pct": 99.96366774149598
+      },
+      "hierarchy_brand": {
+        "total": 14252,
+        "survived": 14252,
+        "dropped": 0,
+        "pct": 100.0
+      },
+      "transliteration": {
+        "total": 3483,
+        "survived": 3483,
+        "dropped": 0,
+        "pct": 100.0
+      },
+      "low_name_sim_lt50": {
+        "total": 1091,
+        "survived": 1078,
+        "dropped": 13,
+        "pct": 98.80843263061412
+      },
+      "low_name_sim_lt40": {
+        "total": 579,
+        "survived": 566,
+        "dropped": 13,
+        "pct": 97.75474956822107
+      },
+      "missing_address": {
+        "total": 1129,
+        "survived": 1129,
+        "dropped": 0,
+        "pct": 100.0
+      },
+      "low_name_sim_lt30": {
+        "total": 407,
+        "survived": 394,
+        "dropped": 13,
+        "pct": 96.80589680589681
+      }
+    }
+  },
+  "candidate_reduction": {
+    "baseline_cands_per_entity": 286.25,
+    "thresh_30_cands_per_entity": 268.62,
+    "thresh_30_reduction_pct": 6.158951965065496,
+    "thresh_25_cands_per_entity": 280.296,
+    "thresh_25_reduction_pct": 2.080000000000004
+  }
+}
