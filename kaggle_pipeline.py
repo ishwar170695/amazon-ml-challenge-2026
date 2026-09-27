@@ -405,24 +405,39 @@ def main():
                     if len(p) >= 4 and p[3] == country:
                         cid, cname, caddr = p[0], p[1], p[2] if p[2] != 'nan' else ''
                         c_idx = len(cand_raw)
-                        cand_raw.append((cid, cname, caddr))
 
                         name_ascii = anyascii.anyascii(cname) if any(ord(c) > 127 for c in cname) else cname
                         addr_ascii = anyascii.anyascii(caddr) if any(ord(c) > 127 for c in caddr) else caddr
                         nn = normalize_text(name_ascii)
                         na = normalize_text(addr_ascii, is_address=True)
                         st = sig_tokens(nn)
+                        pht = {indic_phonetic_skeleton(t) for t in st if len(t) >= 3}
+                        cb = clean_compact_brand(nn)
+                        acr = gen_acronyms(nn)
+                        uks = extract_unit_keys(addr_ascii)
+                        sn = strip_legal(nn)
+                        c3_n = make_char3_set(nn)
+                        c3_a = make_char3_set(na)
+                        pa = parse_addr(addr_ascii)
+                        anums = get_addr_numbers(addr_ascii)
+                        hcs = get_house_codes(addr_ascii)
+                        dat = get_distinctive_addr_tokens(na)
+
+                        # Store pre-normalized tuple (ZERO re-parsing in batch loop)
+                        cand_raw.append((
+                            cid, nn, na, sn, cb, ' '.join(pht), st, c3_n, c3_a, acr, uks,
+                            pa['number'], pa['postcode'], pa['street'], pa['loc_tokens'],
+                            anums, hcs, dat
+                        ))
 
                         for tok in st: inv.setdefault(('T', tok), array.array('I')).append(c_idx)
-                        for num in get_addr_numbers(addr_ascii): inv.setdefault(('N', num), array.array('I')).append(c_idx)
-                        for h in get_house_codes(addr_ascii): inv.setdefault(('H', h), array.array('I')).append(c_idx)
-                        for acr in gen_acronyms(nn): inv.setdefault(('A', acr), array.array('I')).append(c_idx)
-                        for pht in {indic_phonetic_skeleton(t) for t in st if len(t) >= 3}:
-                            inv.setdefault(('PH', pht), array.array('I')).append(c_idx)
-                        for uk in extract_unit_keys(addr_ascii): inv.setdefault(('UK', uk), array.array('I')).append(c_idx)
-                        cb = clean_compact_brand(nn)
+                        for num in anums: inv.setdefault(('N', num), array.array('I')).append(c_idx)
+                        for h in hcs: inv.setdefault(('H', h), array.array('I')).append(c_idx)
+                        for a in acr: inv.setdefault(('A', a), array.array('I')).append(c_idx)
+                        for ph in pht: inv.setdefault(('PH', ph), array.array('I')).append(c_idx)
+                        for uk in uks: inv.setdefault(('UK', uk), array.array('I')).append(c_idx)
                         if cb: inv.setdefault(('CB', cb[:8]), array.array('I')).append(c_idx)
-                        for atok in get_distinctive_addr_tokens(na): inv.setdefault(('AT', atok), array.array('I')).append(c_idx)
+                        for atok in dat: inv.setdefault(('AT', atok), array.array('I')).append(c_idx)
                         if len(nn) >= 3: inv.setdefault(('P', nn[:3]), array.array('I')).append(c_idx)
 
                         cnt += 1
@@ -432,12 +447,12 @@ def main():
 
         inv_pruned = {}
         for k, v in inv.items():
-            limit = 80 if k[0] == 'P' else (150 if k[0] == 'AT' else 300)
+            limit = 40 if k[0] == 'P' else (60 if k[0] in ('AT', 'PH') else 80)
             if len(v) <= limit:
                 inv_pruned[k] = v
         del inv
         gc.collect()
-        print(f"[2/3] Streamed {len(cand_raw):,} candidates. Inverted index pruned to {len(inv_pruned):,} keys in {time.time()-t0:.1f}s", flush=True)
+        print(f"[2/3] Streamed {len(cand_raw):,} pre-normalized candidates. Index pruned to {len(inv_pruned):,} keys in {time.time()-t0:.1f}s", flush=True)
 
         # -------------------------------------------------------------
         # STEP 3: Batch Inference (5k S1 per batch, RAM < 1.8 GB)
@@ -452,9 +467,8 @@ def main():
             b_t0 = time.time()
             batch_s1 = s1_list[b_idx : b_idx + batch_size]
 
-            # 1. Query candidate integer indices
+            # 1. Query candidate integer indices with fast Gate C (threshold = 0.30)
             batch_pairs = []
-            needed_c_indices = set()
             s1_cand_map = {r[0]: [] for r in batch_s1}
 
             for s_rel, r1 in enumerate(batch_s1):
@@ -472,30 +486,34 @@ def main():
                 for atok in r1[17]: cands.update(inv_pruned.get(('AT', atok), ()))
                 if len(r1[1]) >= 3: cands.update(inv_pruned.get(('P', r1[1][:3]), ()))
 
+                # Sub-microsecond Gate C pre-filter (< 0.2 µs per candidate)
                 for c_idx in cands:
-                    cid = cand_raw[c_idx][0]
-                    batch_pairs.append((s_rel, c_idx))
-                    needed_c_indices.add(c_idx)
-                    s1_cand_map[sid].append(cid)
+                    r2 = cand_raw[c_idx]
+                    ntj = set_jaccard(r1[6], r2[6])
+                    nc3 = set_jaccard(r1[7], r2[7])
+                    ac3 = set_jaccard(r1[8], r2[8])
+                    cbm = 1.0 if (r1[4] and r2[4] and r1[4] == r2[4]) else 0.0
+                    pc1, pc2 = r1[12], r2[12]
+                    if pc1 and pc2:
+                        pcm = 1.0 if pc1 == pc2 else (0.5 if (len(pc1) >= 3 and len(pc2) >= 3 and pc1[:3] == pc2[:3]) else 0.0)
+                    else:
+                        pcm = 0.0
+                    hcm = 1.0 if (r1[16] & r2[16]) else 0.0
+                    ukm = 1.0 if (r1[10] & r2[10]) else 0.0
+                    acm = 1.0 if (r1[9] & r2[9]) else 0.0
+                    adm = 1.0 if (r1[17] & r2[17]) else 0.0
+
+                    if max(ac3, nc3, ntj, cbm, pcm, hcm, ukm, acm, adm) >= 0.30:
+                        batch_pairs.append((s_rel, c_idx))
+                        s1_cand_map[sid].append(r2[0])
 
             n_pairs = len(batch_pairs)
 
             if n_pairs > 0:
-                # 2. Parse ONLY needed candidates for this batch
-                batch_cand_tuples = {}
+                # 2. Vectorize TF-IDF ONLY for needed names in surviving pairs
                 new_names = []
-                for c_idx in needed_c_indices:
-                    cid, cname, caddr = cand_raw[c_idx]
-                    r = make_record(cid, cname, caddr, country)
-                    pa = r['parsed_addr']
-                    tup = (
-                        r['norm_name'], r['norm_address'], r['stripped_name'],
-                        r['compact_brand'], ' '.join(r['phonetic_tokens']),
-                        r['sig_tokens'], r['c3_name'], r['c3_addr'], r['acronyms'], r['unit_keys'],
-                        pa['number'], pa['postcode'], pa['street'], pa['loc_tokens']
-                    )
-                    batch_cand_tuples[c_idx] = tup
-                    sn = r['stripped_name']
+                for _, c_idx in batch_pairs:
+                    sn = cand_raw[c_idx][3]
                     if sn not in name_to_wdict:
                         new_names.append(sn)
 
@@ -515,22 +533,22 @@ def main():
                         name_to_cdict[nm] = c_dl[idx_n]
                     del unique_new, w_csr, c_csr, w_dl, c_dl
 
-                # 3. Vectorized feature extraction with hoisted S1 lookups
+                # 3. Vectorized feature extraction with hoisted S1 lookups on survivors
                 X = np.empty((n_pairs, 21), dtype=np.float32)
 
                 for i, (s_rel, c_idx) in enumerate(batch_pairs):
                     r1 = batch_s1[s_rel]
-                    r2 = batch_cand_tuples[c_idx]
+                    r2 = cand_raw[c_idx]
 
-                    n1, n2 = r1[1], r2[0]
-                    a1, a2 = r1[2], r2[1]
+                    n1, n2 = r1[1], r2[1]
+                    a1, a2 = r1[2], r2[2]
 
-                    ntj = set_jaccard(r1[6], r2[5])
+                    ntj = set_jaccard(r1[6], r2[6])
                     nts = fuzz.token_sort_ratio(n1, n2) / 100.0
                     nlv = fuzz.ratio(n1, n2) / 100.0
-                    nc3 = set_jaccard(r1[7], r2[6])
+                    nc3 = set_jaccard(r1[7], r2[7])
 
-                    sn1, sn2 = r1[3], r2[2]
+                    sn1, sn2 = r1[3], r2[3]
                     wd1 = name_to_wdict.get(sn1, {})
                     wd2 = name_to_wdict.get(sn2, {})
                     twc = sum(v * wd2[k] for k, v in wd1.items() if k in wd2) if wd1 and wd2 else 0.0
@@ -540,16 +558,16 @@ def main():
                     tcc = sum(v * cd2[k] for k, v in cd1.items() if k in cd2) if cd1 and cd2 else 0.0
 
                     lex = 1.0 if sn1 and sn1 == sn2 else 0.0
-                    acr = 1.0 if r1[9] & r2[8] else 0.0
+                    acr = 1.0 if r1[9] & r2[9] else 0.0
 
-                    num1, num2 = r1[11], r2[10]
+                    num1, num2 = r1[11], r2[11]
                     if num1 and num2:
                         nsm = 1.0 if num1 == num2 else -1.0
                         mnm = 0.0
                     else:
                         nsm = 0.0; mnm = 1.0
 
-                    pc1, pc2 = r1[12], r2[11]
+                    pc1, pc2 = r1[12], r2[12]
                     if pc1 and pc2:
                         if pc1 == pc2: pcm = 1.0
                         elif pc1[:3] == pc2[:3]: pcm = 0.5
@@ -558,28 +576,26 @@ def main():
                     else:
                         pcm = 0.0; mpc = 1.0
 
-                    ljc = set_jaccard(r1[14], r2[13])
-                    st1, st2 = r1[13], r2[12]
+                    ljc = set_jaccard(r1[14], r2[14])
+                    st1, st2 = r1[13], r2[13]
                     slv = (fuzz.ratio(st1, st2) / 100.0) if st1 and st2 else 0.0
-                    ac3 = set_jaccard(r1[8], r2[7])
+                    ac3 = set_jaccard(r1[8], r2[8])
                     alv = (fuzz.ratio(a1, a2) / 100.0) if a1 and a2 else 0.0
                     mad = 1.0 if not a1 or not a2 else 0.0
 
                     max_l = max(len(n1), len(n2), 1)
                     nld = abs(len(n1) - len(n2)) / max_l
 
-                    pht1, pht2 = r1[5], r2[4]
+                    pht1, pht2 = r1[5], r2[5]
                     phs = (fuzz.token_sort_ratio(pht1, pht2) / 100.0) if pht1 and pht2 else 0.0
 
-                    cb1, cb2 = r1[4], r2[3]
+                    cb1, cb2 = r1[4], r2[4]
                     cbs = (fuzz.ratio(cb1, cb2) / 100.0) if cb1 and cb2 else 0.0
 
-                    u1, u2 = r1[10], r2[9]
+                    u1, u2 = r1[10], r2[10]
                     ukm = 1.0 if (u1 and u2 and (u1 & u2)) else (-1.0 if (u1 and u2) else 0.0)
 
                     X[i] = [ntj, nts, nlv, nc3, twc, tcc, lex, acr, nsm, mnm, pcm, mpc, ljc, slv, ac3, alv, mad, nld, phs, cbs, ukm]
-
-                del batch_cand_tuples, needed_c_indices
 
                 # 4. Multi-threaded OpenMP LightGBM scoring in 100k sub-batches
                 all_probs = []
